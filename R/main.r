@@ -24,6 +24,7 @@ shinyServerRun = function(input, output, session, context) {
   })
 
   getPropertiesAsMapReactive = context$getPropertiesAsMap()
+  getRunFolderReactive = context$getRunFolder()
   getDataReactive = context$getData()
   go = reactiveVal(0)
 
@@ -37,11 +38,14 @@ shinyServerRun = function(input, output, session, context) {
     getData=getDataReactive$value
     if (is.null(getData)) return()
 
+    getFolder = getRunFolderReactive$value
+    if(is.null(getFolder)) return()
+
     bndata = getData()
     df = bndata$data
 
     observeEvent(go(), {
-      showNotification(ui = "Running VSN ...", type = "message", closeButton = TRUE, duration = NULL)
+      showNotification(ui = "Running VSN ...", type = "message", closeButton = FALSE, duration = NULL)
       if (bndata$hasColors){
         grouping = droplevels(interaction(df[bndata$colorColumnNames]))
       } else {
@@ -51,7 +55,16 @@ shinyServerRun = function(input, output, session, context) {
       if(!input$refset){
         vsnResult = df %>% group_by(grp) %>% do(vsn0(., normalization = input$affine))
         hdf = vsnResult %>% group_by(grp) %>% do(vsnh(.))
+      } else{
+        if(is.null(input$reffile)) return()
+        refFile = input$reffile
+        load(refFile$datapath)
+        refdf = aCube
+        vsnResult = df %>% group_by(grp) %>% do(vsnr(., refdf, normalization = input$affine))
+        hdf = vsnResult %>% group_by(grp) %>% do(vsnh(.))
       }
+      save(file = file.path(getFolder(),"runData.RData"), vsnResult)
+
       hdf = hdf[,-1]
       hdf = hdf[!is.na(hdf$Hvsn),]
       meta.hdf = data.frame(labelDescription = c("rowSeq", "colSeq", "Hvsn"),
@@ -68,5 +81,28 @@ shinyServerRun = function(input, output, session, context) {
         go(val + 1)
       }
     }, ignoreNULL = FALSE)
+  })
+}
+
+shinyServerShowResults = function(input, output, session, context){
+  getFolderReactive = context$getRunFolder()
+
+  output$body = renderUI({
+    mainPanel(
+      selectInput("group", "Show meanSdPlot for", choices = ""),
+      plotOutput("msplot")
+    )
+  })
+
+  observe({
+    getFolder = getFolderReactive$value
+    if (is.null(getFolder)) return()
+    load(file.path(getFolder(), "runData.RData"))
+    updateSelectInput(session,"group", choices = vsnResult$grp)
+
+    output$msplot = renderPlot({
+      idx = which(input$group == vsnResult$grp)
+      meanSdPlot(vsnResult$vsn[[idx[1]]])
+    })
   })
 }
