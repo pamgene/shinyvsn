@@ -1,0 +1,10 @@
+Package: shinyvsn
+Type: Package
+Title: VSN normalization
+Version: 1.0
+Author: Rik de Wijn
+Description: VSN normalization with some interactive options
+Encoding: UTF-8
+LazyData: true
+Date: 16-09-2017
+Imports: bnutil, shiny, vsn, reshape2, dplyr
