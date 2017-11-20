@@ -24,4 +24,4 @@ bnMessageHandler$setResultHandler = setResult
 bnMessageHandler$getPropertiesAsMapHandler = getProperties
 
 
-bnshiny::startBNTestShiny('shinyvsn', sessionType='show', bnMessageHandler=bnMessageHandler)
+bnshiny::startBNTestShiny('shinyvsn', sessionType='run', bnMessageHandler=bnMessageHandler)

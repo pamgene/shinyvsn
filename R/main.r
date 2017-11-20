@@ -19,14 +19,14 @@ shinyServerRun = function(input, output, session, context) {
         conditionalPanel(condition = 'input.refset',
             fileInput("reffile", "Select file with reference set")
         ),
-        actionButton("start", "Start")
+        actionButton("start", "Start"),
+        verbatimTextOutput("status")
       )
   })
 
   getPropertiesAsMapReactive = context$getPropertiesAsMap()
   getRunFolderReactive = context$getRunFolder()
   getDataReactive = context$getData()
-  go = reactiveVal(0)
 
   observe({
 
@@ -44,43 +44,48 @@ shinyServerRun = function(input, output, session, context) {
     bndata = getData()
     df = bndata$data
 
-    observeEvent(go(), {
-      showNotification(ui = "Running VSN ...", type = "message", closeButton = FALSE, duration = NULL)
-      if (bndata$hasColors){
-        grouping = droplevels(interaction(df[bndata$colorColumnNames]))
+    output$status = renderText({
+      if(input$start >0){
+        showNotification(ui = "Running VSN ...", type = "message", closeButton = FALSE, duration = NULL)
+        if (bndata$hasColors){
+          grouping = droplevels(interaction(df[bndata$colorColumnNames]))
+        } else {
+          grouping = "none"
+        }
+        df = data.frame(df, grp = grouping)
+        if(!input$refset){
+          vsnResult = df %>% group_by(grp) %>% do(vsn0(., normalization = input$affine))
+          hdf = vsnResult %>% group_by(grp) %>% do(vsnh(.))
+        } else{
+          if(is.null(input$reffile)) return()
+          refFile = input$reffile
+          load(refFile$datapath)
+          refdf = aCube
+          vsnResult = df %>% group_by(grp) %>% do(vsnr(., refdf, normalization = input$affine))
+          hdf = vsnResult %>% group_by(grp) %>% do(vsnh(.))
+        }
+        save(file = file.path(getFolder(),"runData.RData"), vsnResult)
+
+        hdf = hdf[,-1]
+        hdf = hdf[!is.na(hdf$Hvsn),]
+        meta.hdf = data.frame(labelDescription = c("rowSeq", "colSeq", "Hvsn"),
+                              groupingType = c("rowSeq", "colSeq", "QuantitationType"))
+        result = AnnotatedData$new(data = hdf, metadata = meta.hdf)
+        context$setResult(result)
+        return("Done")
       } else {
-        grouping = "none"
+        return(".")
       }
-      df = data.frame(df, grp = grouping)
-      if(!input$refset){
-        vsnResult = df %>% group_by(grp) %>% do(vsn0(., normalization = input$affine))
-        hdf = vsnResult %>% group_by(grp) %>% do(vsnh(.))
-      } else{
-        if(is.null(input$reffile)) return()
-        refFile = input$reffile
-        load(refFile$datapath)
-        refdf = aCube
-        vsnResult = df %>% group_by(grp) %>% do(vsnr(., refdf, normalization = input$affine))
-        hdf = vsnResult %>% group_by(grp) %>% do(vsnh(.))
-      }
-      save(file = file.path(getFolder(),"runData.RData"), vsnResult)
 
-      hdf = hdf[,-1]
-      hdf = hdf[!is.na(hdf$Hvsn),]
-      meta.hdf = data.frame(labelDescription = c("rowSeq", "colSeq", "Hvsn"),
-                            groupingType = c("rowSeq", "colSeq", "QuantitationType"))
-      result = AnnotatedData$new(data = hdf, metadata = meta.hdf)
-      context$setResult(result)
+    })
 
-    }, ignoreInit = TRUE)
-
-    observeEvent(input$start, {
-      if(is.null(input$start)) return()
-      if ( (propertiesAsMap$Interactive == "No") | (input$start > 0) ){
-        val = go()
-        go(val + 1)
-      }
-    }, ignoreNULL = FALSE)
+    # observeEvent(input$start, {
+    #   if(is.null(input$start)) return()
+    #   if ( (propertiesAsMap$Interactive == "No") | (input$start > 0) ){
+    #     val = go()
+    #     go(val + 1)
+    #   }
+    # }, ignoreNULL = FALSE)
   })
 }
 
