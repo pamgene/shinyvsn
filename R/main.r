@@ -1,6 +1,7 @@
 #' @import bnutil
 #' @import shiny
 #' @import dplyr
+#' @import plyr
 #'
 #' @export
 operatorProperties = function() {
@@ -19,7 +20,7 @@ shinyServerRun = function(input, output, session, context) {
         conditionalPanel(condition = 'input.refset',
             fileInput("reffile", "Select file with reference set")
         ),
-        actionButton("start", "Start"),
+        actionButton("start", "Run VSN"),
         verbatimTextOutput("status")
       )
   })
@@ -54,14 +55,17 @@ shinyServerRun = function(input, output, session, context) {
         }
         df = data.frame(df, grp = grouping)
         if(!input$refset){
-          vsnResult = df %>% group_by(grp) %>% do(vsn0(., normalization = input$affine))
-          hdf = vsnResult %>% group_by(grp) %>% do(vsnh(.))
+          #vsnResult = df %>% group_by(grp) %>% do(vsn0(., normalization = input$affine))
+          vsnResult = ddply(df, ~ grp, .fun = vsn0, normalization = input$affine)
+          #hdf = vsnResult %>% group_by(grp) %>% do(vsnh(.))
+          hdf = ddply(vsnResult, ~ grp, .fun = vsnh)
         } else{
           if(is.null(input$reffile)) return()
           refFile = input$reffile
           load(refFile$datapath)
           refdf = aCube
           vsnResult = df %>% group_by(grp) %>% do(vsnr(., refdf, normalization = input$affine))
+
           hdf = vsnResult %>% group_by(grp) %>% do(vsnh(.))
         }
         save(file = file.path(getFolder(),"runData.RData"), vsnResult)

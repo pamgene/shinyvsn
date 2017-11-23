@@ -2,6 +2,7 @@ library(bnutil)
 library(vsn)
 library(shinyvsn)
 library(dplyr)
+library(plyr)
 library(reshape2)
 library(data.table)
 
