@@ -2,9 +2,11 @@
 
 export(operatorProperties)
 export(shinyServerRun)
+export(shinyServerShowResults)
 import(bnutil)
 import(data.table)
 import(dplyr)
+import(plyr)
 import(reshape2)
 import(shiny)
 import(vsn)
