@@ -8,9 +8,9 @@ vsn0 = function(df, normalization = TRUE){
   result = data.table(vsn = list(aVsn))
 }
 
-vsnr = function(df, refdf, normalization = TRUE){
+vsnr = function(df, normalization = TRUE){
   X = acast(df, ID ~ colSeq)
-  R = acast(refdf, ID ~ colSeq)
+  R = acast(df %>% filter(RefFactor == levels(RefFactor)[1]), ID ~ colSeq)
 
   if(dim(X)[1] != dim(R)[1]){
     stop("Number of rows in data and reference do not match")

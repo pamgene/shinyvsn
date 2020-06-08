@@ -18,7 +18,8 @@ shinyServerRun = function(input, output, session, context) {
         checkboxInput("affine", "Affine normalization", value = TRUE),
         checkboxInput("refset", "Use reference data", value = FALSE),
         conditionalPanel(condition = 'input.refset',
-            fileInput("reffile", "Browse ...")
+            selectInput("reffactor", "Reference annotation factor", choices = list(), selected = "nothing"),
+            selectInput("reflevel",  "Reference annotation level", choices = list())
         ),
         actionButton("start", "Run"),
         verbatimTextOutput("status")
@@ -30,7 +31,24 @@ shinyServerRun = function(input, output, session, context) {
   getStepFolderReactive = context$getFolder()
   getDataReactive = context$getData()
 
-  refFile = NULL
+
+  setStoredSettings = function(settingsFile, indat){
+    return()
+    # if(!file.exists(settingsFile)) return()
+    #
+    # load(settingsFile)
+    # if (! settings$reffactor %in% indat$arrayLabels) return()
+    # rf = indat$data[[settings$reffactor]]
+    # if (! settings$reflevel  %in% levels(rf) ) return()
+    #
+    # updateSelectInput(session,  inputId = "reffactor", selected = settings$reffactor)
+    # updateSelectInput(session,  inputId = "reflevel" , selected = settings$reflevel)
+    # updateCheckboxInput(session, inputId = "affine", value = settings$affine)
+    # updateCheckboxInput(session, inputId = "refset", value = settings$refset)
+    #
+    # return()
+  }
+
 
   observe({
     getPropertiesAsMap=getPropertiesAsMapReactive$value
@@ -49,10 +67,23 @@ shinyServerRun = function(input, output, session, context) {
     bndata = getData()
     df = bndata$data
 
+    updateSelectInput(session,  inputId = "reffactor", choices = bndata$arrayLabels)
+    rf = factor(df[[ bndata$arrayLabels[1] ]])
+    updateSelectInput(session, inputId = "reflevel", choices = levels(rf))
+
+    #settingsFile = file.path(getStepFolder(),"stepData.RData")
+    #setStoredSettings(settingsFile, bndata)
+
     output$status = renderText({
+      observeEvent(input$reffactor, {
+        rf = factor(df[[input$reffactor]])
+        updateSelectInput(session, inputId = "reflevel", choices = levels(rf))
+      })
+
       isolate({
         bRef = input$refset
       })
+
       if(input$start >0){
         showNotification(ui = "Running VSN ...", type = "message", closeButton = FALSE, duration = NULL)
         if (bndata$hasColors){
@@ -67,17 +98,23 @@ shinyServerRun = function(input, output, session, context) {
             hdf = vsnResult %>% group_by(grp) %>% do(vsnh(.))
             reslist = list(vsnResult = vsnResult)
           }else{
-            refdf = getRefData()
-            if(!is.null(refdf)){
-              vsnResult = df %>% group_by(grp) %>% do(vsnr(., refdf, normalization = input$affine))
-              hdf = vsnResult %>% group_by(grp) %>% do(vsnh(.))
-              reslist = list(vsnResult = vsnResult, refdf = refdf, refFileName = input$reffile$name)
-            } else {
-              stop("Please select a file with a reference set.")
-            }
+            df$RefFactor = factor(df[[input$reffactor]])
+            df$RefFactor = relevel(df$RefFactor, ref = input$reflevel)
+            edit(levels(df$RefFactor))
+            vsnResult = df %>% group_by(grp) %>% do(vsnr(., normalization = input$affine))
+            hdf = vsnResult %>% group_by(grp) %>% do(vsnh(.))
+            reslist = list(vsnResult = vsnResult)
           }
+
+          settings = list(affine = input$affine,
+                          refset = input$refset,
+                          reffactor = input$reffactor,
+                          reflevel = input$reflevel)
         })
+        reslist$settings = settings
+        reslist$df = df
         save(file = file.path(getRunFolder(),"runData.RData"), reslist)
+        #save(file = settingsFile , settings)
         hdf = hdf[,-1]
         hdf = hdf[!is.na(hdf$Hvsn),]
         hdf$rowSeq = as.double(hdf$rowSeq)
@@ -92,16 +129,7 @@ shinyServerRun = function(input, output, session, context) {
       }
     })
 
-    getRefData = reactive({
-      refFile = input$reffile
-      if(is.null(refFile)){
-        return(NULL)
-      } else {
-       load(refFile$datapath)
-       refdf = aCube
-       return(refdf)
-      }
-    })
+
 
   })
 }
@@ -131,11 +159,13 @@ shinyServerShowResults = function(input, output, session, context){
     })
 
     output$ref = renderText({
-      if(!is.null(reslist$refFileName)){
-        return(reslist$refFileName)
+      if(reslist$settings$refset){
+        str = paste("Data with ", reslist$settings$reffactor," @",levels(reslist$df$RefFactor)[1]," used as reference data.", sep = "")
+        return(str)
       } else {
-        return("No reference file used.")
+        return("No reference data used.")
       }
     })
   })
 }
+
