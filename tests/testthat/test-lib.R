@@ -7,6 +7,7 @@ test_that("unit.regression", {
 
   df = shinyvsn::S100.df
   load("refdata_200916.RData")
+
   r0 = df %>% do(vsn0(.)) %>% do(vsnh(.))
   expect_equal(r0, result0)
 
@@ -14,6 +15,7 @@ test_that("unit.regression", {
   expect_equal(r0.na, result0.na)
 
   dfr = df %>% mutate(RefFactor = factor(Sample.batch))
+
   rr = dfr %>% do(vsnr(.)) %>% do(vsnh(.))
   expect_equal(rr, resultr)
 
