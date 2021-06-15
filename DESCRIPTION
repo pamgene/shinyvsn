@@ -1,11 +1,11 @@
 Package: shinyvsn
 Type: Package
 Title: VSN normalization with Shiny interface
-Version: 1.7
+Version: 1.8
 Author: Rik de Wijn
 Description: VSN normalization with some interactive options
 Encoding: UTF-8
 LazyData: true
 Date: 08-06-2020
 Imports: bnutil, shiny, vsn, reshape2, dplyr,plyr, data.table
-RoxygenNote: 6.0.1
+RoxygenNote: 7.1.1
