@@ -67,8 +67,8 @@ shinyServerRun = function(input, output, session, context) {
     bndata = getData()
     df = bndata$data
 
-    updateSelectInput(session,  inputId = "reffactor", choices = bndata$arrayLabels)
-    rf = factor(df[[ bndata$arrayLabels[1] ]])
+    updateSelectInput(session,  inputId = "reffactor", choices = bndata$arrayColumnNames)
+    rf = factor(df[[ bndata$arrayColumnNames[1] ]])
     updateSelectInput(session, inputId = "reflevel", choices = levels(rf))
 
     #settingsFile = file.path(getStepFolder(),"stepData.RData")

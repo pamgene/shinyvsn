@@ -1,7 +1,7 @@
 Package: shinyvsn
 Type: Package
 Title: VSN normalization with Shiny interface
-Version: 1.8
+Version: 1.9
 Author: Rik de Wijn
 Description: VSN normalization with some interactive options
 Encoding: UTF-8
